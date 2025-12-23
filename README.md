@@ -4,33 +4,31 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A **concurrent-safe** RESTful API server for Excel file operations. Designed for multi-user scenarios where multiple workflows or users need to access the same Excel files simultaneously.
+一個**並發安全**的 Excel 檔案操作 RESTful API 伺服器。專為多使用者場景設計，讓多個工作流程或使用者可以同時安全地存取相同的 Excel 檔案。
 
-[中文說明](README_zh-TW.md)
+## 🎯 為什麼需要這個專案？
 
-## 🎯 Why This Project?
+### 問題
+當多個程序/使用者同時存取 Excel 檔案時：
+- ❌ 檔案損壞
+- ❌ 資料遺失（最後寫入覆蓋）
+- ❌ 競態條件（Race conditions）
+- ❌ 程序間缺乏協調
 
-### The Problem
-When multiple processes/users access Excel files simultaneously:
-- ❌ File corruption
-- ❌ Data loss (last-write-wins)
-- ❌ Race conditions
-- ❌ No coordination between processes
+### 解決方案
+本 API 伺服器提供：
+- ✅ **檔案鎖定機制** - 自動佇列管理
+- ✅ **並發安全** - 無資料遺失或損壞
+- ✅ **多使用者支援** - 完美適用於 Web 表單和 n8n 工作流程
+- ✅ **RESTful API** - 易於與任何平台整合
+- ✅ **批次操作** - 高效的批量更新
 
-### The Solution
-This API server provides:
-- ✅ **File locking mechanism** - Automatic queue management
-- ✅ **Concurrent safety** - No data loss or corruption
-- ✅ **Multi-user support** - Perfect for web forms and n8n workflows
-- ✅ **RESTful API** - Easy integration with any platform
-- ✅ **Batch operations** - Efficient bulk updates
+## 🚀 快速開始
 
-## 🚀 Quick Start
-
-### Method 1: Docker (Recommended)
+### 方法 1：Docker（建議）
 
 ```bash
-# 1. Create docker-compose.yml
+# 1. 建立 docker-compose.yml
 cat > docker-compose.yml << 'EOF'
 version: '3.8'
 services:
@@ -45,51 +43,51 @@ services:
     restart: unless-stopped
 EOF
 
-# 2. Start the service
+# 2. 啟動服務
 docker-compose up -d
 
-# 3. Test
+# 3. 測試
 curl http://localhost:8000/
 ```
 
-### Method 2: Python Virtual Environment
+### 方法 2：Python 虛擬環境
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/yourusername/excel-api-server.git
+# 1. 複製儲存庫
+git clone https://github.com/code4Copilot/excel-api-server.git
 cd excel-api-server
 
-# 2. Create virtual environment
+# 2. 建立虛擬環境
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows 系統使用：venv\Scripts\activate
 
-# 3. Install dependencies
+# 3. 安裝相依套件
 pip install -r requirements.txt
 
-# 4. Create data directory
+# 4. 建立資料目錄
 mkdir data
 
-# 5. Set environment variables
+# 5. 設定環境變數
 export API_TOKEN=your-secret-token-here
 
-# 6. Start server
+# 6. 啟動伺服器
 uvicorn main:app --host 0.0.0.0 --port 8000
 
-# 7. Access API documentation
-# Open browser: http://localhost:8000/docs
+# 7. 存取 API 文件
+# 在瀏覽器中開啟：http://localhost:8000/docs
 ```
 
-## 📚 API Documentation
+## 📚 API 文件
 
-### Interactive API Docs
+### 互動式 API 文件
 
-Once the server is running, visit:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+伺服器啟動後，請造訪：
+- **Swagger UI**：http://localhost:8000/docs
+- **ReDoc**：http://localhost:8000/redoc
 
-### Authentication
+### 身分驗證
 
-All API requests require Bearer token authentication:
+所有 API 請求都需要 Bearer token 驗證：
 
 ```bash
 curl -X POST http://localhost:8000/api/excel/append \
@@ -98,14 +96,14 @@ curl -X POST http://localhost:8000/api/excel/append \
   -d '{"file": "test.xlsx", "sheet": "Sheet1", "values": ["A", "B", "C"]}'
 ```
 
-### API Endpoints
+### API 端點
 
-#### 1. Health Check
+#### 1. 健康檢查
 
 ```bash
 GET /
 
-Response:
+回應：
 {
   "service": "Excel API Server",
   "status": "running",
@@ -114,21 +112,21 @@ Response:
 }
 ```
 
-#### 2. Append Row
+#### 2. 新增列
 
 ```bash
 POST /api/excel/append
 Content-Type: application/json
 Authorization: Bearer {token}
 
-Body:
+請求內容：
 {
   "file": "users.xlsx",
   "sheet": "Sheet1",
   "values": ["E0001", "John Doe", "Engineering", 75000]
 }
 
-Response:
+回應：
 {
   "success": true,
   "row_number": 5,
@@ -136,21 +134,21 @@ Response:
 }
 ```
 
-#### 3. Read Data
+#### 3. 讀取資料
 
 ```bash
 POST /api/excel/read
 Content-Type: application/json
 Authorization: Bearer {token}
 
-Body:
+請求內容：
 {
   "file": "users.xlsx",
   "sheet": "Sheet1",
-  "range": "A1:D10"  // Optional, leave empty for all data
+  "range": "A1:D10"  // 選填，留空則讀取所有資料
 }
 
-Response:
+回應：
 {
   "success": true,
   "data": [
@@ -162,14 +160,14 @@ Response:
 }
 ```
 
-#### 4. Update Row
+#### 4. 更新列
 
 ```bash
 PUT /api/excel/update
 Content-Type: application/json
 Authorization: Bearer {token}
 
-Body:
+請求內容：
 {
   "file": "users.xlsx",
   "sheet": "Sheet1",
@@ -178,42 +176,42 @@ Body:
   "column_start": 1
 }
 
-Response:
+回應：
 {
   "success": true,
   "message": "Row 5 updated successfully"
 }
 ```
 
-#### 5. Delete Row
+#### 5. 刪除列
 
 ```bash
 DELETE /api/excel/delete
 Content-Type: application/json
 Authorization: Bearer {token}
 
-Body:
+請求內容：
 {
   "file": "users.xlsx",
   "sheet": "Sheet1",
   "row": 5
 }
 
-Response:
+回應：
 {
   "success": true,
   "message": "Row 5 deleted successfully"
 }
 ```
 
-#### 6. Batch Operations
+#### 6. 批次操作
 
 ```bash
 POST /api/excel/batch
 Content-Type: application/json
 Authorization: Bearer {token}
 
-Body:
+請求內容：
 {
   "file": "users.xlsx",
   "sheet": "Sheet1",
@@ -234,7 +232,7 @@ Body:
   ]
 }
 
-Response:
+回應：
 {
   "success": true,
   "results": [
@@ -246,56 +244,56 @@ Response:
 }
 ```
 
-## 🔒 File Locking Mechanism
+## 🔒 檔案鎖定機制
 
-### How It Works
+### 運作原理
 
 ```python
-# Request 1 arrives
-Lock file → Read Excel → Modify → Write Excel → Release lock
+# 請求 1 到達
+鎖定檔案 → 讀取 Excel → 修改 → 寫入 Excel → 釋放鎖定
 
-# Request 2 arrives (while Request 1 is processing)
-Wait for lock → Lock file → Read Excel → Modify → Write Excel → Release lock
+# 請求 2 到達（當請求 1 正在處理時）
+等待鎖定 → 鎖定檔案 → 讀取 Excel → 修改 → 寫入 Excel → 釋放鎖定
 
-# Request 3 arrives (while Request 2 is processing)
-Wait for lock → ...
+# 請求 3 到達（當請求 2 正在處理時）
+等待鎖定 → ...
 ```
 
-### Features
+### 功能特色
 
-- **Automatic queue management** - Requests are processed sequentially
-- **Timeout protection** - Default 30 seconds timeout
-- **Error recovery** - Locks are automatically released on errors
-- **Thread-safe** - Uses Python threading.Lock
-- **Cross-platform** - Works on Windows, Linux, and macOS
+- **自動佇列管理** - 請求會依序處理
+- **逾時保護** - 預設 30 秒逾時
+- **錯誤復原** - 發生錯誤時會自動釋放鎖定
+- **執行緒安全** - 使用 Python threading.Lock
+- **跨平台** - 支援 Windows、Linux 和 macOS
 
-## 🔧 Configuration
+## 🔧 設定
 
-### Environment Variables
+### 環境變數
 
-Create `.env` file:
+建立 `.env` 檔案：
 
 ```env
-# API Security
+# API 安全性
 API_TOKEN=your-super-secret-token-change-in-production
 
-# Server Settings
+# 伺服器設定
 HOST=0.0.0.0
 PORT=8000
 LOG_LEVEL=INFO
 
-# Excel Settings
+# Excel 設定
 EXCEL_ROOT_DIR=./data
 MAX_FILE_SIZE_MB=50
 
-# Performance
+# 效能
 LOCK_TIMEOUT=30
 MAX_WORKERS=4
 ```
 
-### Docker Environment
+### Docker 環境
 
-In `docker-compose.yml`:
+在 `docker-compose.yml` 中：
 
 ```yaml
 environment:
@@ -304,19 +302,19 @@ environment:
   - LOCK_TIMEOUT=60
 ```
 
-## 🧪 Testing
+## 🧪 測試
 
-### Unit Tests
+### 單元測試
 
 ```bash
-# Run all tests
+# 執行所有測試
 pytest
 
-# Run with coverage
+# 執行並產生覆蓋率報告
 pytest --cov=. --cov-report=html
 ```
 
-### Concurrent Test
+### 並發測試
 
 ```python
 # concurrent_test.py
@@ -339,61 +337,61 @@ def append_row(worker_id):
     )
     print(f"Worker {worker_id}: {response.json()}")
 
-# Launch 10 concurrent requests
+# 啟動 10 個並發請求
 threads = [threading.Thread(target=append_row, args=(i,)) for i in range(10)]
 for t in threads: t.start()
 for t in threads: t.join()
 
-print("All requests completed!")
+print("所有請求完成！")
 ```
 
-### Load Test
+### 負載測試
 
 ```bash
-# Using Apache Bench
+# 使用 Apache Bench
 ab -n 100 -c 10 -H "Authorization: Bearer your-token" \
    -p append.json -T application/json \
    http://localhost:8000/api/excel/append
 
-# Using wrk
+# 使用 wrk
 wrk -t4 -c10 -d30s -H "Authorization: Bearer your-token" \
     --script=append.lua http://localhost:8000/api/excel/append
 ```
 
-## 📊 Performance
+## 📊 效能
 
-### Benchmarks
+### 基準測試
 
-Tested on: Intel Core i7, 16GB RAM, SSD
+測試環境：Intel Core i7、16GB RAM、SSD
 
-| Operation | Throughput | Latency (avg) |
+| 操作 | 吞吐量 | 延遲（平均）|
 |-----------|-----------|---------------|
-| Append (single) | ~50 req/s | 20ms |
-| Append (batch 10) | ~200 req/s | 50ms |
-| Read (1000 rows) | ~100 req/s | 10ms |
-| Update (single) | ~45 req/s | 22ms |
+| 新增（單筆）| ~50 req/s | 20ms |
+| 新增（批次 10 筆）| ~200 req/s | 50ms |
+| 讀取（1000 列）| ~100 req/s | 10ms |
+| 更新（單筆）| ~45 req/s | 22ms |
 
-### Optimization Tips
+### 最佳化建議
 
-1. **Use batch operations** for multiple changes
-2. **Specify range** when reading (don't read entire file)
-3. **Enable caching** for frequently read data
-4. **Use SSD** for data directory
-5. **Increase workers** for high load
+1. **使用批次操作**進行多筆變更
+2. **指定範圍**進行讀取（不要讀取整個檔案）
+3. **啟用快取**用於經常讀取的資料
+4. **使用 SSD** 作為資料目錄
+5. **增加工作程序數**以應對高負載
 
-## 🛡️ Security
+## 🛡️ 安全性
 
-### Best Practices
+### 最佳實踐
 
-1. **Use strong API tokens**
+1. **使用強式 API token**
    ```bash
-   # Generate secure token
+   # 產生安全的 token
    python -c "import secrets; print(secrets.token_urlsafe(32))"
    ```
 
-2. **Use HTTPS in production**
+2. **在正式環境使用 HTTPS**
    ```nginx
-   # Nginx reverse proxy
+   # Nginx 反向代理
    server {
        listen 443 ssl;
        server_name api.yourdomain.com;
@@ -409,9 +407,9 @@ Tested on: Intel Core i7, 16GB RAM, SSD
    }
    ```
 
-3. **Enable rate limiting**
+3. **啟用速率限制**
    ```python
-   # In main.py
+   # 在 main.py 中
    from slowapi import Limiter
    
    limiter = Limiter(key_func=get_remote_address)
@@ -423,11 +421,11 @@ Tested on: Intel Core i7, 16GB RAM, SSD
        pass
    ```
 
-4. **Restrict file paths**
-   - Files are automatically restricted to `EXCEL_ROOT_DIR`
-   - Path traversal attacks are prevented
+4. **限制檔案路徑**
+   - 檔案會自動限制在 `EXCEL_ROOT_DIR` 目錄內
+   - 可防止路徑遍歷攻擊
 
-5. **Regular backups**
+5. **定期備份**
    ```bash
    # backup.sh
    #!/bin/bash
@@ -436,22 +434,22 @@ Tested on: Intel Core i7, 16GB RAM, SSD
    cp -r ./data/*.xlsx $BACKUP_DIR/
    ```
 
-## 📈 Monitoring
+## 📈 監控
 
-### Logs
+### 日誌
 
 ```bash
 # Docker
 docker-compose logs -f excel-api
 
-# Local
+# 本機
 tail -f logs/excel-api.log
 ```
 
-### Metrics Endpoint
+### 指標端點
 
 ```python
-# Add to main.py
+# 加入到 main.py
 @app.get("/api/metrics")
 async def get_metrics():
     return {
@@ -461,10 +459,10 @@ async def get_metrics():
     }
 ```
 
-### Health Check
+### 健康檢查
 
 ```bash
-# Add to docker-compose.yml
+# 加入到 docker-compose.yml
 healthcheck:
   test: ["CMD", "curl", "-f", "http://localhost:8000/"]
   interval: 30s
@@ -474,13 +472,13 @@ healthcheck:
 
 ## 🐳 Docker
 
-### Build Image
+### 建置映像檔
 
 ```bash
 docker build -t excel-api-server .
 ```
 
-### Run Container
+### 執行容器
 
 ```bash
 docker run -d \
@@ -515,7 +513,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # Optional: Nginx reverse proxy
+  # 選填：Nginx 反向代理
   nginx:
     image: nginx:alpine
     ports:
@@ -527,21 +525,21 @@ services:
       - excel-api
 ```
 
-## 🔧 Troubleshooting
+## 🔧 故障排除
 
-### Issue 1: Port already in use
+### 問題 1：埠號已被使用
 
 ```bash
-# Check what's using the port
+# 檢查是什麼在使用該埠號
 lsof -i :8000  # Mac/Linux
 netstat -ano | findstr :8000  # Windows
 
-# Change port in docker-compose.yml
+# 在 docker-compose.yml 中變更埠號
 ports:
   - "8001:8000"
 ```
 
-### Issue 2: File permission denied
+### 問題 2：檔案權限被拒絕
 
 ```bash
 # Fix permissions
@@ -549,83 +547,83 @@ chmod -R 755 data/
 chown -R $(whoami) data/
 ```
 
-### Issue 3: Lock timeout
+### 問題 3：鎖定逾時
 
-**Cause:** Operation taking too long or deadlock
+**原因：** 操作時間過長或死鎖
 
-**Solution:**
+**解決方案：**
 ```bash
-# Restart server to release all locks
+# 重新啟動伺服器以釋放所有鎖定
 docker-compose restart excel-api
 
-# Or increase timeout in .env
+# 或在 .env 中增加逾時時間
 LOCK_TIMEOUT=60
 ```
 
-### Issue 4: Excel file corrupted
+### 問題 4：Excel 檔案損壞
 
-**Solution:**
+**解決方案：**
 ```bash
-# Restore from backup
+# 從備份還原
 cp backups/latest/your-file.xlsx data/
 
-# Verify file integrity
+# 驗證檔案完整性
 python -c "import openpyxl; wb = openpyxl.load_workbook('data/your-file.xlsx'); print('OK')"
 ```
 
-## 🤝 Contributing
+## 🤝 貢獻
 
-Contributions are welcome!
+歡迎貢獻！
 
-### Development Setup
+### 開發環境設定
 
 ```bash
-# 1. Fork and clone
-git clone https://github.com/yourusername/excel-api-server.git
+# 1. Fork 並 clone
+git clone https://github.com/code4Copilot/excel-api-server.git
 cd excel-api-server
 
-# 2. Create virtual environment
+# 2. 建立虛擬環境
 python -m venv venv
 source venv/bin/activate
 
-# 3. Install dev dependencies
+# 3. 安裝開發相依套件
 pip install -r requirements-dev.txt
 
-# 4. Run tests
+# 4. 執行測試
 pytest
 
-# 5. Start dev server
+# 5. 啟動開發伺服器
 uvicorn main:app --reload
 ```
 
-### Submitting Changes
+### 提交變更
 
-1. Create a feature branch: `git checkout -b feature/AmazingFeature`
-2. Commit your changes: `git commit -m 'Add AmazingFeature'`
-3. Push to the branch: `git push origin feature/AmazingFeature`
-4. Open a Pull Request
+1. 建立功能分支：`git checkout -b feature/AmazingFeature`
+2. 提交你的變更：`git commit -m 'Add AmazingFeature'`
+3. 推送到分支：`git push origin feature/AmazingFeature`
+4. 開啟 Pull Request
 
-## 📄 License
+## 📄 授權條款
 
-MIT License - see [LICENSE](LICENSE) file for details
+MIT License - 詳見 [LICENSE](LICENSE) 檔案
 
-## 🔗 Related Projects
+## 🔗 相關專案
 
-- [n8n-nodes-excel-api](https://github.com/yourusername/n8n-nodes-excel-api) - n8n community node for this API
-- [n8n](https://github.com/n8n-io/n8n) - Workflow automation tool
+- [n8n-nodes-excel-api](https://github.com/code4Copilot/n8n-nodes-excel-api) - 此 API 的 n8n 社群節點
+- [n8n](https://github.com/n8n-io/n8n) - 工作流程自動化工具
 
-## 📧 Support
+## 📧 支援
 
-- GitHub Issues: [Report a bug](https://github.com/yourusername/excel-api-server/issues)
-- Email: your.email@example.com
-- Documentation: [Wiki](https://github.com/yourusername/excel-api-server/wiki)
+- GitHub Issues：[回報問題](https://github.com/code4Copilot/excel-api-server/issues)
+- Email：your.email@example.com
+- 文件：[Wiki](https://github.com/code4Copilot/excel-api-server/wiki)
 
-## 🙏 Acknowledgments
+## 🙏 致謝
 
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
-- [openpyxl](https://openpyxl.readthedocs.io/) - Excel file library
-- [n8n](https://n8n.io/) - Workflow automation platform
+- [FastAPI](https://fastapi.tiangolo.com/) - 現代化的 Python Web 框架
+- [openpyxl](https://openpyxl.readthedocs.io/) - Excel 檔案函式庫
+- [n8n](https://n8n.io/) - 工作流程自動化平台
 
 ---
 
-**Made with ❤️ for concurrent Excel operations**
+**用 ❤️ 為並發 Excel 操作而製作**
