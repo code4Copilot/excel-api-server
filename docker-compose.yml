@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  excel-api:
+    build: .
+    container_name: excel-api-server
+    ports:
+      - "8000:8000"
+    volumes:
+      # 掛載資料目錄（持久化 Excel 檔案）
+      - ./data:/app/data
+      # 開發模式：掛載代碼（修改後自動重載）
+      - ./main.py:/app/main.py
+    environment:
+      - API_TOKEN=your-secret-token-here
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
