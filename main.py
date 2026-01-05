@@ -216,8 +216,17 @@ def get_headers(ws) -> Dict[str, int]:
 
 def find_row_by_lookup(ws, lookup_column: str, lookup_value: str) -> Optional[int]:
     """
-    根據欄位名稱和值查找列號
+    根據欄位名稱和值查找第一筆列號（向後兼容）
     返回找到的列號（1-based），如果沒找到返回 None
+    """
+    rows = find_all_rows_by_lookup(ws, lookup_column, lookup_value)
+    return rows[0] if rows else None
+
+
+def find_all_rows_by_lookup(ws, lookup_column: str, lookup_value: str) -> List[int]:
+    """
+    根據欄位名稱和值查找所有符合條件的列號
+    返回找到的列號列表（1-based），如果沒找到返回空列表
     """
     headers = get_headers(ws)
     
@@ -228,16 +237,17 @@ def find_row_by_lookup(ws, lookup_column: str, lookup_value: str) -> Optional[in
         )
     
     lookup_col_idx = headers[lookup_column]
+    matched_rows = []
     
     # 從第2列開始搜索（第1列是表頭）
     for row_idx in range(2, ws.max_row + 1):
         cell_value = ws.cell(row=row_idx, column=lookup_col_idx).value
         # 轉換為字串進行比較
         if str(cell_value) == str(lookup_value):
+            matched_rows.append(row_idx)
             logger.info(f"Found match at row {row_idx}: {lookup_column}={lookup_value}")
-            return row_idx
     
-    return None
+    return matched_rows
 
 
 # ============================================================================
@@ -480,9 +490,9 @@ async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depen
                         detail="Cannot update header row (row 1). Data rows start from row 2."
                     )
             elif request.lookup_column and request.lookup_value:
-                # 方式2: 透過 Lookup 查找
-                target_row = find_row_by_lookup(ws, request.lookup_column, request.lookup_value)
-                if target_row is None:
+                # 方式2: 透過 Lookup 查找所有符合條件的記錄
+                target_rows = find_all_rows_by_lookup(ws, request.lookup_column, request.lookup_value)
+                if not target_rows:
                     raise HTTPException(
                         status_code=404, 
                         detail=f"No row found where {request.lookup_column} = {request.lookup_value}"
@@ -496,25 +506,30 @@ async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depen
             # 獲取表頭
             headers = get_headers(ws)
             
-            # 更新指定的欄位
+            # 處理單筆或多筆更新
+            rows_to_update = [target_row] if target_row is not None else target_rows
             updated_columns = []
-            for column_name, new_value in request.values_to_set.items():
-                if column_name not in headers:
-                    logger.warning(f"Column '{column_name}' not found in headers, skipping")
-                    continue
-                
-                col_idx = headers[column_name]
-                ws.cell(row=target_row, column=col_idx, value=new_value)
-                updated_columns.append(column_name)
-                logger.info(f"Updated row {target_row}, column '{column_name}' = {new_value}")
+            
+            for row_num in rows_to_update:
+                for column_name, new_value in request.values_to_set.items():
+                    if column_name not in headers:
+                        logger.warning(f"Column '{column_name}' not found in headers, skipping")
+                        continue
+                    
+                    col_idx = headers[column_name]
+                    ws.cell(row=row_num, column=col_idx, value=new_value)
+                    if column_name not in updated_columns:
+                        updated_columns.append(column_name)
+                    logger.info(f"Updated row {row_num}, column '{column_name}' = {new_value}")
             
             cleanup_all_empty_rows(ws)
             save_workbook(wb, file_path)
             
             return {
                 "success": True, 
-                "message": f"Row {target_row} updated",
-                "row_number": target_row,
+                "message": f"{len(rows_to_update)} row(s) updated",
+                "rows_updated": rows_to_update,
+                "updated_count": len(rows_to_update),
                 "updated_columns": updated_columns
             }
         finally:
@@ -577,9 +592,9 @@ async def delete_row_advanced(request: DeleteAdvancedRequest, token: str = Depen
                         detail="Cannot delete header row (row 1). Data rows start from row 2."
                     )
             elif request.lookup_column and request.lookup_value:
-                # 方式2: 透過 Lookup 查找
-                target_row = find_row_by_lookup(ws, request.lookup_column, request.lookup_value)
-                if target_row is None:
+                # 方式2: 透過 Lookup 查找所有符合條件的記錄
+                target_rows = find_all_rows_by_lookup(ws, request.lookup_column, request.lookup_value)
+                if not target_rows:
                     raise HTTPException(
                         status_code=404, 
                         detail=f"No row found where {request.lookup_column} = {request.lookup_value}"
@@ -590,15 +605,21 @@ async def delete_row_advanced(request: DeleteAdvancedRequest, token: str = Depen
                     detail="Must provide either 'row' or both 'lookup_column' and 'lookup_value'"
                 )
             
-            # 刪除該列
-            ws.delete_rows(target_row)
+            # 處理單筆或多筆刪除（從後往前刪除以避免行號偏移）
+            rows_to_delete = [target_row] if target_row is not None else sorted(target_rows, reverse=True)
+            
+            for row_num in rows_to_delete:
+                ws.delete_rows(row_num)
+                logger.info(f"Deleted row {row_num}")
+            
             cleanup_all_empty_rows(ws)
             save_workbook(wb, file_path)
             
             return {
                 "success": True, 
-                "message": f"Row {target_row} deleted",
-                "deleted_row": target_row
+                "message": f"{len(rows_to_delete)} row(s) deleted",
+                "rows_deleted": rows_to_delete if target_row is None else [target_row],
+                "deleted_count": len(rows_to_delete)
             }
         finally:
             file_lock_manager.release(str(file_path))
