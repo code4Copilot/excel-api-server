@@ -4,7 +4,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-一個**並發安全**的 Excel 檔案操作 RESTful API 伺服器。專為多使用者場景設計，讓多個工作流程或使用者可以同時安全地存取相同的 Excel 檔案。
+一個**並發安全**的 Excel 檔案操作 RESTful API 伺服器。專為多使用者場景設計，讓多個工作流程或使用者可以同時安全地存取相同的 Excel 檔案。支援批量條件更新和刪除，完美適用於自動化工作流程。
 
 ## 🎯 為什麼需要這個專案？
 
@@ -204,7 +204,112 @@ Authorization: Bearer {token}
 }
 ```
 
-#### 6. 批次操作
+#### 6. 進階更新（支援條件查詢和批量更新）
+
+```bash
+PUT /api/excel/update_advanced
+Content-Type: application/json
+Authorization: Bearer {token}
+
+# 範例 1：按列號更新（單筆）
+請求內容：
+{
+  "file": "users.xlsx",
+  "sheet": "Sheet1",
+  "row": 3,
+  "values_to_set": {
+    "Name": "Updated Name",
+    "Salary": 85000
+  }
+}
+
+回應：
+{
+  "success": true,
+  "message": "1 row(s) updated",
+  "rows_updated": [3],
+  "updated_count": 1,
+  "updated_columns": ["Name", "Salary"]
+}
+
+# 範例 2：按條件查詢更新（批量）
+請求內容：
+{
+  "file": "users.xlsx",
+  "sheet": "Sheet1",
+  "lookup_column": "Department",
+  "lookup_value": "Engineering",
+  "values_to_set": {
+    "Salary": 90000
+  }
+}
+
+回應：
+{
+  "success": true,
+  "message": "3 row(s) updated",
+  "rows_updated": [2, 5, 8],
+  "updated_count": 3,
+  "updated_columns": ["Salary"]
+}
+```
+
+**功能特色：**
+- 🎯 **按列號更新**：使用 `row` 參數更新指定列
+- 🔍 **條件查詢**：使用 `lookup_column` 和 `lookup_value` 查找記錄
+- 📦 **批量更新**：自動更新所有符合條件的記錄
+- 🎨 **欄位選擇**：只更新 `values_to_set` 中指定的欄位
+- 🛡️ **標題保護**：無法更新第 1 列（標題列）
+
+#### 7. 進階刪除（支援條件查詢和批量刪除）
+
+```bash
+DELETE /api/excel/delete_advanced
+Content-Type: application/json
+Authorization: Bearer {token}
+
+# 範例 1：按列號刪除（單筆）
+請求內容：
+{
+  "file": "users.xlsx",
+  "sheet": "Sheet1",
+  "row": 5
+}
+
+回應：
+{
+  "success": true,
+  "message": "1 row(s) deleted",
+  "rows_deleted": [5],
+  "deleted_count": 1
+}
+
+# 範例 2：按條件查詢刪除（批量）
+請求內容：
+{
+  "file": "users.xlsx",
+  "sheet": "Sheet1",
+  "lookup_column": "Department",
+  "lookup_value": "Sales"
+}
+
+回應：
+{
+  "success": true,
+  "message": "4 row(s) deleted",
+  "rows_deleted": [8, 6, 4, 2],
+  "deleted_count": 4
+}
+```
+
+**功能特色：**
+- 🎯 **按列號刪除**：使用 `row` 參數刪除指定列
+- 🔍 **條件查詢**：使用 `lookup_column` 和 `lookup_value` 查找記錄
+- 📦 **批量刪除**：自動刪除所有符合條件的記錄
+- ⚡ **智能排序**：從後往前刪除，避免行號偏移
+- 🛡️ **標題保護**：無法刪除第 1 列（標題列）
+
+#### 8. 批次操作
 
 ```bash
 POST /api/excel/batch
@@ -244,7 +349,123 @@ Authorization: Bearer {token}
 }
 ```
 
-## 🔒 檔案鎖定機制
+## � 批量操作使用案例
+
+### 案例 1：批量更新員工薪資
+
+```python
+import requests
+
+API_URL = "http://localhost:8000"
+HEADERS = {"Authorization": "Bearer your-token"}
+
+# 將所有 Engineering 部門員工的薪資調整為 90000
+response = requests.put(
+    f"{API_URL}/api/excel/update_advanced",
+    headers=HEADERS,
+    json={
+        "file": "employees.xlsx",
+        "sheet": "Sheet1",
+        "lookup_column": "Department",
+        "lookup_value": "Engineering",
+        "values_to_set": {
+            "Salary": 90000,
+            "LastUpdate": "2026-01-05"
+        }
+    }
+)
+
+result = response.json()
+print(f"已更新 {result['updated_count']} 位員工")
+print(f"更新的列號: {result['rows_updated']}")
+```
+
+### 案例 2：批量刪除過期訂單
+
+```python
+# 刪除所有狀態為 "已取消" 的訂單
+response = requests.request(
+    "DELETE",
+    f"{API_URL}/api/excel/delete_advanced",
+    headers=HEADERS,
+    json={
+        "file": "orders.xlsx",
+        "sheet": "Orders",
+        "lookup_column": "Status",
+        "lookup_value": "已取消"
+    }
+)
+
+result = response.json()
+print(f"已刪除 {result['deleted_count']} 筆訂單")
+```
+
+### 案例 3：條件篩選與更新
+
+```python
+# 步驟 1：讀取所有資料
+read_response = requests.post(
+    f"{API_URL}/api/excel/read",
+    headers=HEADERS,
+    json={"file": "products.xlsx", "sheet": "Sheet1"}
+)
+
+data = read_response.json()["data"]
+headers = data[0]
+
+# 步驟 2：分析並批量更新
+# 將所有庫存低於 10 的商品標記為 "需補貨"
+for row in data[1:]:
+    product_id = row[0]
+    stock = row[3]  # 假設庫存在第 4 欄
+    
+    if stock < 10:
+        requests.put(
+            f"{API_URL}/api/excel/update_advanced",
+            headers=HEADERS,
+            json={
+                "file": "products.xlsx",
+                "sheet": "Sheet1",
+                "lookup_column": "ProductID",
+                "lookup_value": product_id,
+                "values_to_set": {"Status": "需補貨"}
+            }
+        )
+```
+
+### 案例 4：n8n 工作流程整合
+
+在 n8n 中使用 Excel API 節點：
+
+```javascript
+// n8n HTTP Request 節點設定
+{
+  "method": "PUT",
+  "url": "http://excel-api:8000/api/excel/update_advanced",
+  "authentication": "genericCredentialType",
+  "headers": {
+    "Authorization": "Bearer {{$credentials.apiToken}}"
+  },
+  "body": {
+    "file": "{{$node["Get File"].json["file"]}}",
+    "sheet": "Sheet1",
+    "lookup_column": "Email",
+    "lookup_value": "{{$json["email"]}}",
+    "values_to_set": {
+      "LastLogin": "{{$now}}",
+      "Status": "Active"
+    }
+  }
+}
+```
+
+**優勢：**
+- ✅ 單次 API 調用處理多筆記錄
+- ✅ 減少網路往返次數
+- ✅ 原子性操作，確保資料一致性
+- ✅ 自動處理並發安全
+
+## �🔒 檔案鎖定機制
 
 ### 運作原理
 
