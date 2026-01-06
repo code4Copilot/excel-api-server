@@ -3,8 +3,18 @@
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-3.4.0-blue.svg)](CHANGELOG.md)
 
 一個**並發安全**的 Excel 檔案操作 RESTful API 伺服器。專為多使用者場景設計，讓多個工作流程或使用者可以同時安全地存取相同的 Excel 檔案。支援批量條件更新和刪除，完美適用於自動化工作流程。
+
+## 📖 文件導航
+
+- **[快速開始](#-快速開始)** - 立即開始使用
+- **[API 文件](#-api-文件)** - 完整的 API 端點說明
+- **[API 參數參考](API_REFERENCE.md)** - 詳細的參數說明和範例
+- **[測試指南](TESTING.md)** - 如何執行測試
+- **[版本歷史](CHANGELOG.md)** - 完整的更新記錄
+- **[v3.4.0 更新說明](RELEASE_NOTES_3.4.0.md)** - 最新版本的新功能
 
 ## 🎯 為什麼需要這個專案？
 
@@ -107,8 +117,8 @@ GET /
 {
   "service": "Excel API Server",
   "status": "running",
-  "version": "1.0.0",
-  "timestamp": "2025-12-20T10:30:00"
+  "version": "3.4.0",
+  "timestamp": "2026-01-06T10:30:00"
 }
 ```
 
@@ -232,13 +242,14 @@ Authorization: Bearer {token}
   "updated_columns": ["Name", "Salary"]
 }
 
-# 範例 2：按條件查詢更新（批量）
+# 範例 2：按條件查詢更新（批量 - 所有符合記錄）
 請求內容：
 {
   "file": "users.xlsx",
   "sheet": "Sheet1",
   "lookup_column": "Department",
   "lookup_value": "Engineering",
+  "process_all": true,  // 預設為 true，處理所有符合條件的記錄
   "values_to_set": {
     "Salary": 90000
   }
@@ -250,14 +261,39 @@ Authorization: Bearer {token}
   "message": "3 row(s) updated",
   "rows_updated": [2, 5, 8],
   "updated_count": 3,
-  "updated_columns": ["Salary"]
+  "updated_columns": ["Salary"],
+  "process_mode": "all"
+}
+
+# 範例 3：按條件查詢更新（僅第一筆）
+請求內容：
+{
+  "file": "users.xlsx",
+  "sheet": "Sheet1",
+  "lookup_column": "Department",
+  "lookup_value": "Engineering",
+  "process_all": false,  // 設為 false，只處理第一筆符合的記錄
+  "values_to_set": {
+    "Salary": 90000
+  }
+}
+
+回應：
+{
+  "success": true,
+  "message": "1 row(s) updated",
+  "rows_updated": [2],
+  "updated_count": 1,
+  "updated_columns": ["Salary"],
+  "process_mode": "first"
 }
 ```
 
 **功能特色：**
 - 🎯 **按列號更新**：使用 `row` 參數更新指定列
 - 🔍 **條件查詢**：使用 `lookup_column` 和 `lookup_value` 查找記錄
-- 📦 **批量更新**：自動更新所有符合條件的記錄
+- 📦 **批量更新**：使用 `process_all=true`（預設）更新所有符合條件的記錄
+- 🎯 **單筆更新**：使用 `process_all=false` 只更新第一筆符合的記錄
 - 🎨 **欄位選擇**：只更新 `values_to_set` 中指定的欄位
 - 🛡️ **標題保護**：無法更新第 1 列（標題列）
 
@@ -284,13 +320,14 @@ Authorization: Bearer {token}
   "deleted_count": 1
 }
 
-# 範例 2：按條件查詢刪除（批量）
+# 範例 2：按條件查詢刪除（批量 - 所有符合記錄）
 請求內容：
 {
   "file": "users.xlsx",
   "sheet": "Sheet1",
   "lookup_column": "Department",
-  "lookup_value": "Sales"
+  "lookup_value": "Sales",
+  "process_all": true  // 預設為 true，刪除所有符合條件的記錄
 }
 
 回應：
@@ -298,14 +335,35 @@ Authorization: Bearer {token}
   "success": true,
   "message": "4 row(s) deleted",
   "rows_deleted": [8, 6, 4, 2],
-  "deleted_count": 4
+  "deleted_count": 4,
+  "process_mode": "all"
+}
+
+# 範例 3：按條件查詢刪除（僅第一筆）
+請求內容：
+{
+  "file": "users.xlsx",
+  "sheet": "Sheet1",
+  "lookup_column": "Department",
+  "lookup_value": "Sales",
+  "process_all": false  // 設為 false，只刪除第一筆符合的記錄
+}
+
+回應：
+{
+  "success": true,
+  "message": "1 row(s) deleted",
+  "rows_deleted": [2],
+  "deleted_count": 1,
+  "process_mode": "first"
 }
 ```
 
 **功能特色：**
 - 🎯 **按列號刪除**：使用 `row` 參數刪除指定列
 - 🔍 **條件查詢**：使用 `lookup_column` 和 `lookup_value` 查找記錄
-- 📦 **批量刪除**：自動刪除所有符合條件的記錄
+- 📦 **批量刪除**：使用 `process_all=true`（預設）刪除所有符合條件的記錄
+- 🎯 **單筆刪除**：使用 `process_all=false` 只刪除第一筆符合的記錄
 - ⚡ **智能排序**：從後往前刪除，避免行號偏移
 - 🛡️ **標題保護**：無法刪除第 1 列（標題列）
 
@@ -368,6 +426,7 @@ response = requests.put(
         "sheet": "Sheet1",
         "lookup_column": "Department",
         "lookup_value": "Engineering",
+        "process_all": True,  # 預設值，處理所有符合條件的記錄
         "values_to_set": {
             "Salary": 90000,
             "LastUpdate": "2026-01-05"
@@ -392,7 +451,8 @@ response = requests.request(
         "file": "orders.xlsx",
         "sheet": "Orders",
         "lookup_column": "Status",
-        "lookup_value": "已取消"
+        "lookup_value": "已取消",
+        "process_all": True  # 預設值，刪除所有符合條件的訂單
     }
 )
 
@@ -400,7 +460,35 @@ result = response.json()
 print(f"已刪除 {result['deleted_count']} 筆訂單")
 ```
 
-### 案例 3：條件篩選與更新
+### 案例 3：只更新第一筆符合條件的記錄
+
+```python
+# 適用於需要只處理第一筆匹配記錄的場景
+# 例如：處理待處理的客服工單（先進先出）
+response = requests.put(
+    f"{API_URL}/api/excel/update_advanced",
+    headers=HEADERS,
+    json={
+        "file": "support_tickets.xlsx",
+        "sheet": "Tickets",
+        "lookup_column": "Status",
+        "lookup_value": "待處理",
+        "process_all": False,  # 只處理第一筆
+        "values_to_set": {
+            "Status": "處理中",
+            "AssignedTo": "Agent001",
+            "StartTime": "2026-01-06 10:00:00"
+        }
+    }
+)
+
+result = response.json()
+if result['success']:
+    print(f"已指派工單 (列 {result['rows_updated'][0]})")
+    print(f"處理模式: {result['process_mode']}")  # 輸出: "first"
+```
+
+### 案例 4：條件篩選與更新
 
 ```python
 # 步驟 1：讀取所有資料
@@ -433,10 +521,11 @@ for row in data[1:]:
         )
 ```
 
-### 案例 4：n8n 工作流程整合
+### 案例 5：n8n 工作流程整合
 
 在 n8n 中使用 Excel API 節點：
 
+**範例 1：批量更新所有匹配記錄（預設行為）**
 ```javascript
 // n8n HTTP Request 節點設定
 {
@@ -451,6 +540,7 @@ for row in data[1:]:
     "sheet": "Sheet1",
     "lookup_column": "Email",
     "lookup_value": "{{$json["email"]}}",
+    "process_all": true,  // 預設值，更新所有匹配的記錄
     "values_to_set": {
       "LastLogin": "{{$now}}",
       "Status": "Active"
@@ -459,8 +549,35 @@ for row in data[1:]:
 }
 ```
 
+**範例 2：只處理第一筆匹配記錄（適用於工單處理等場景）**
+```javascript
+// n8n HTTP Request 節點設定 - 處理待辦工單
+{
+  "method": "PUT",
+  "url": "http://excel-api:8000/api/excel/update_advanced",
+  "authentication": "genericCredentialType",
+  "headers": {
+    "Authorization": "Bearer {{$credentials.apiToken}}"
+  },
+  "body": {
+    "file": "tickets.xlsx",
+    "sheet": "Tickets",
+    "lookup_column": "Status",
+    "lookup_value": "待處理",
+    "process_all": false,  // 只處理第一筆待處理工單
+    "values_to_set": {
+      "Status": "處理中",
+      "AssignedTo": "{{$json["agent_id"]}}",
+      "StartTime": "{{$now}}"
+    }
+  }
+}
+```
+
 **優勢：**
-- ✅ 單次 API 調用處理多筆記錄
+- ✅ 彈性控制：可選擇處理所有記錄或只處理第一筆
+- ✅ 單次 API 調用處理多筆記錄（process_all=true）
+- ✅ 先進先出處理（process_all=false 適用於佇列場景）
 - ✅ 減少網路往返次數
 - ✅ 原子性操作，確保資料一致性
 - ✅ 自動處理並發安全
@@ -828,7 +945,32 @@ uvicorn main:app --reload
 
 MIT License - 詳見 [LICENSE](LICENSE) 檔案
 
-## 🔗 相關專案
+## � 更新日誌
+
+### Version 3.4.0 (2026-01-06)
+
+**新功能：**
+- ✨ 新增 `process_all` 參數到進階更新 API (`/api/excel/update_advanced`)
+  - `process_all=true` (預設): 處理所有符合條件的記錄
+  - `process_all=false`: 只處理第一筆符合條件的記錄
+- ✨ 新增 `process_all` 參數到進階刪除 API (`/api/excel/delete_advanced`)
+  - `process_all=true` (預設): 刪除所有符合條件的記錄
+  - `process_all=false`: 只刪除第一筆符合條件的記錄
+- 🎯 回應中新增 `process_mode` 欄位，顯示 "all" 或 "first"
+
+**改進：**
+- 📚 完善 API 文件，新增 `process_all` 參數使用範例
+- 🧪 新增針對 `process_all` 參數的單元測試
+- 📖 更新 README.md 和 TESTING.md 文件
+
+**相容性：**
+- ✅ 完全向後相容：`process_all` 預設為 `true`，保持原有行為
+- ✅ 適用於 n8n 社群節點的 Process Mode 選項
+
+### Version 3.3.0 及更早版本
+詳見 [CHANGELOG.md](CHANGELOG.md)
+
+## �🔗 相關專案
 
 - [n8n-nodes-excel-api](https://github.com/code4Copilot/n8n-nodes-excel-api) - 此 API 的 n8n 社群節點
 - [n8n](https://github.com/n8n-io/n8n) - 工作流程自動化工具

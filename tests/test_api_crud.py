@@ -115,19 +115,23 @@ class TestUpdateOperations:
     def test_update_by_row_number(self, client, auth_headers, sample_excel_file):
         """測試按列號更新"""
         response = client.put(
-            "/api/excel/update",
+            "/api/excel/update_advanced",
             headers=auth_headers,
             json={
                 "file": "test.xlsx",
                 "sheet": "Sheet1",
                 "row": 2,
-                "values": ["E001", "Updated Name", "Updated Dept", 99000],
-                "column_start": 1
+                "values_to_set": {
+                    "Name": "Updated Name",
+                    "Department": "Updated Dept",
+                    "Salary": 99000
+                }
             }
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
+        assert data["updated_count"] == 1
     
     def test_update_advanced_by_lookup(self, client, auth_headers, sample_excel_file):
         """測試進階更新（Lookup 模式）"""
@@ -152,7 +156,7 @@ class TestUpdateOperations:
         assert 3 in data["rows_updated"]
     
     def test_update_advanced_multiple_matches(self, client, auth_headers, sample_excel_file):
-        """測試進階更新（多筆符合條件）"""
+        """測試進階更新（多筆符合條件 - process_all=True）"""
         # 先新增兩筆相同 Department 的記錄
         client.post("/api/excel/append", headers=auth_headers, 
                    json={"file": "test.xlsx", "sheet": "Sheet1", 
@@ -161,7 +165,7 @@ class TestUpdateOperations:
                    json={"file": "test.xlsx", "sheet": "Sheet1",
                          "values": ["E005", "User5", "Engineering", 65000]})
         
-        # 更新所有 Engineering 部門的 Salary
+        # 更新所有 Engineering 部門的 Salary（預設 process_all=True）
         response = client.put(
             "/api/excel/update_advanced",
             headers=auth_headers,
@@ -170,6 +174,7 @@ class TestUpdateOperations:
                 "sheet": "Sheet1",
                 "lookup_column": "Department",
                 "lookup_value": "Engineering",
+                "process_all": True,
                 "values_to_set": {
                     "Salary": 80000
                 }
@@ -180,22 +185,56 @@ class TestUpdateOperations:
         assert data["success"] is True
         assert data["updated_count"] == 3  # E001 + E004 + E005
         assert len(data["rows_updated"]) == 3
+        assert data["process_mode"] == "all"
+    
+    def test_update_advanced_first_match_only(self, client, auth_headers, sample_excel_file):
+        """測試進階更新（只處理第一筆 - process_all=False）"""
+        # 先新增兩筆相同 Department 的記錄
+        client.post("/api/excel/append", headers=auth_headers,
+                   json={"file": "test.xlsx", "sheet": "Sheet1",
+                         "values": ["E004", "User4", "HR", 50000]})
+        client.post("/api/excel/append", headers=auth_headers,
+                   json={"file": "test.xlsx", "sheet": "Sheet1",
+                         "values": ["E005", "User5", "HR", 52000]})
+        
+        # 只更新第一筆 HR 部門的記錄
+        response = client.put(
+            "/api/excel/update_advanced",
+            headers=auth_headers,
+            json={
+                "file": "test.xlsx",
+                "sheet": "Sheet1",
+                "lookup_column": "Department",
+                "lookup_value": "HR",
+                "process_all": False,
+                "values_to_set": {
+                    "Salary": 90000
+                }
+            }
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["success"] is True
+        assert data["updated_count"] == 1  # 只處理第一筆
+        assert len(data["rows_updated"]) == 1
+        assert data["process_mode"] == "first"
     
     def test_update_invalid_row(self, client, auth_headers, sample_excel_file):
         """測試更新無效列號"""
         response = client.put(
-            "/api/excel/update",
+            "/api/excel/update_advanced",
             headers=auth_headers,
             json={
                 "file": "test.xlsx",
                 "sheet": "Sheet1",
                 "row": 999,
-                "values": ["Test"],
-                "column_start": 1
+                "values_to_set": {
+                    "Name": "Test"
+                }
             }
         )
-        # 超出範圍的列號會引發 500 錯誤
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        # 超出範圍的列號會引發 400 錯誤
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 class TestDeleteOperations:
     """刪除操作測試"""
@@ -204,7 +243,7 @@ class TestDeleteOperations:
         """測試按列號刪除"""
         response = client.request(
             "DELETE",
-            "/api/excel/delete",
+            "/api/excel/delete_advanced",
             headers=auth_headers,
             json={
                 "file": "test.xlsx",
@@ -215,6 +254,7 @@ class TestDeleteOperations:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
+        assert data["deleted_count"] == 1
     
     def test_delete_advanced_by_lookup(self, client, auth_headers, sample_excel_file):
         """測試進階刪除（Lookup 模式）"""
@@ -236,7 +276,7 @@ class TestDeleteOperations:
         assert 4 in data["rows_deleted"]
     
     def test_delete_advanced_multiple_matches(self, client, auth_headers, sample_excel_file):
-        """測試進階刪除（多筆符合條件）"""
+        """測試進階刪除（多筆符合條件 - process_all=True）"""
         # 先新增兩筆相同 Department 的記錄
         client.post("/api/excel/append", headers=auth_headers,
                    json={"file": "test.xlsx", "sheet": "Sheet1",
@@ -245,7 +285,7 @@ class TestDeleteOperations:
                    json={"file": "test.xlsx", "sheet": "Sheet1",
                          "values": ["E005", "User5", "Sales", 58000]})
         
-        # 刪除所有 Sales 部門的記錄
+        # 刪除所有 Sales 部門的記錄（預設 process_all=True）
         response = client.request(
             "DELETE",
             "/api/excel/delete_advanced",
@@ -254,7 +294,8 @@ class TestDeleteOperations:
                 "file": "test.xlsx",
                 "sheet": "Sheet1",
                 "lookup_column": "Department",
-                "lookup_value": "Sales"
+                "lookup_value": "Sales",
+                "process_all": True
             }
         )
         assert response.status_code == status.HTTP_200_OK
@@ -262,6 +303,37 @@ class TestDeleteOperations:
         assert data["success"] is True
         assert data["deleted_count"] == 3  # E002 + E004 + E005
         assert len(data["rows_deleted"]) == 3
+        assert data["process_mode"] == "all"
+    
+    def test_delete_advanced_first_match_only(self, client, auth_headers, sample_excel_file):
+        """測試進階刪除（只處理第一筆 - process_all=False）"""
+        # 先新增兩筆相同 Department 的記錄
+        client.post("/api/excel/append", headers=auth_headers,
+                   json={"file": "test.xlsx", "sheet": "Sheet1",
+                         "values": ["E004", "User4", "Marketing", 45000]})
+        client.post("/api/excel/append", headers=auth_headers,
+                   json={"file": "test.xlsx", "sheet": "Sheet1",
+                         "values": ["E005", "User5", "Marketing", 48000]})
+        
+        # 只刪除第一筆 Marketing 部門的記錄
+        response = client.request(
+            "DELETE",
+            "/api/excel/delete_advanced",
+            headers=auth_headers,
+            json={
+                "file": "test.xlsx",
+                "sheet": "Sheet1",
+                "lookup_column": "Department",
+                "lookup_value": "Marketing",
+                "process_all": False
+            }
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["success"] is True
+        assert data["deleted_count"] == 1  # 只處理第一筆
+        assert len(data["rows_deleted"]) == 1
+        assert data["process_mode"] == "first"
     
     def test_delete_nonexistent_row(self, client, auth_headers, sample_excel_file):
         """測試刪除不存在的列"""

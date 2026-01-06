@@ -81,14 +81,17 @@ def test_concurrent_mixed_operations(client, auth_headers, sample_excel_file):
     
     def update_op(row_num):
         response = client.put(
-            "/api/excel/update",
+            "/api/excel/update_advanced",
             headers=auth_headers,
             json={
                 "file": "test.xlsx",
                 "sheet": "Sheet1",
                 "row": row_num,
-                "values": ["Updated", "Updated", "Updated", 99999],
-                "column_start": 1
+                "values_to_set": {
+                    "Name": "Updated",
+                    "Department": "Updated",
+                    "Salary": 99999
+                }
             }
         )
         results["update"].append(response.status_code == status.HTTP_200_OK)

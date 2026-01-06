@@ -1,7 +1,7 @@
 """
 Excel API Backend - FastAPI Server
 支援多人並發安全的 Excel 檔案操作
-Version 3.3.0 - 支援 Object Mode Append（按欄位名稱新增）
+Version 3.4.0 - 支援選擇性處理 Lookup 匹配記錄
 """
 
 import os
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Excel API Server",
     description="並發安全的 Excel 檔案操作 API",
-    version="3.3.0"
+    version="3.4.0"
 )
 
 app.add_middleware(
@@ -107,41 +107,29 @@ class AppendRequest(BaseModel):
 class AppendObjectRequest(BaseModel):
     file: str = Field(..., description="Excel 檔案名稱")
     sheet: str = Field(default="Sheet1", description="工作表名稱")
-    values: Dict[str, Any] = Field(..., description="要新增的值（欄位名稱: 值）")
+    values: Dict[str, Any] = Field(..., description="要新增的值(欄位名稱: 值)")
 
 class ReadRequest(BaseModel):
     file: str
     sheet: str = "Sheet1"
     range: Optional[str] = Field(None, description="範圍")
 
-class UpdateRequest(BaseModel):
-    file: str
-    sheet: str = "Sheet1"
-    row: int = Field(..., description="要更新的列號（1-based）")
-    values: List[Any] = Field(..., description="新的值列表")
-    column_start: int = Field(1, description="開始更新的欄位（1-based）")
-
-class DeleteRequest(BaseModel):
-    file: str
-    sheet: str = "Sheet1"
-    row: int = Field(..., description="要刪除的列號（1-based）")
-
-# 新增：進階更新請求模型
 class UpdateAdvancedRequest(BaseModel):
     file: str = Field(..., description="Excel 檔案名稱")
     sheet: str = Field(default="Sheet1", description="工作表名稱")
-    row: Optional[int] = Field(None, description="直接指定列號（1-based）")
+    row: Optional[int] = Field(None, description="直接指定列號(1-based)")
     lookup_column: Optional[str] = Field(None, description="查找的欄位名稱")
     lookup_value: Optional[str] = Field(None, description="查找的值")
-    values_to_set: Dict[str, Any] = Field(..., description="要更新的欄位與值（欄位名稱: 新值）")
+    process_all: Optional[bool] = Field(True, description="是否處理所有匹配記錄(預設True)")
+    values_to_set: Dict[str, Any] = Field(..., description="要更新的欄位與值(欄位名稱: 新值)")
 
-# 新增：進階刪除請求模型
 class DeleteAdvancedRequest(BaseModel):
     file: str = Field(..., description="Excel 檔案名稱")
     sheet: str = Field(default="Sheet1", description="工作表名稱")
-    row: Optional[int] = Field(None, description="直接指定列號（1-based）")
+    row: Optional[int] = Field(None, description="直接指定列號(1-based)")
     lookup_column: Optional[str] = Field(None, description="查找的欄位名稱")
     lookup_value: Optional[str] = Field(None, description="查找的值")
+    process_all: Optional[bool] = Field(True, description="是否處理所有匹配記錄(預設True)")
 
 class BatchOperation(BaseModel):
     type: str = Field(..., description="操作類型: append, update, delete")
@@ -214,19 +202,10 @@ def get_headers(ws) -> Dict[str, int]:
             headers[str(header_value)] = col_idx
     return headers
 
-def find_row_by_lookup(ws, lookup_column: str, lookup_value: str) -> Optional[int]:
-    """
-    根據欄位名稱和值查找第一筆列號（向後兼容）
-    返回找到的列號（1-based），如果沒找到返回 None
-    """
-    rows = find_all_rows_by_lookup(ws, lookup_column, lookup_value)
-    return rows[0] if rows else None
-
-
 def find_all_rows_by_lookup(ws, lookup_column: str, lookup_value: str) -> List[int]:
     """
     根據欄位名稱和值查找所有符合條件的列號
-    返回找到的列號列表（1-based），如果沒找到返回空列表
+    返回找到的列號列表(1-based)，如果沒找到返回空列表
     """
     headers = get_headers(ws)
     
@@ -239,7 +218,7 @@ def find_all_rows_by_lookup(ws, lookup_column: str, lookup_value: str) -> List[i
     lookup_col_idx = headers[lookup_column]
     matched_rows = []
     
-    # 從第2列開始搜索（第1列是表頭）
+    # 從第2列開始搜索(第1列是表頭)
     for row_idx in range(2, ws.max_row + 1):
         cell_value = ws.cell(row=row_idx, column=lookup_col_idx).value
         # 轉換為字串進行比較
@@ -282,7 +261,7 @@ async def root():
     return {
         "service": "Excel API Server",
         "status": "running",
-        "version": "3.3.0",
+        "version": "3.4.0",
         "timestamp": datetime.now().isoformat(),
         "data_directory": str(EXCEL_ROOT_DIR),
         "lock_timeout": file_lock_manager.default_timeout
@@ -321,7 +300,7 @@ async def list_sheets(file: str, token: str = Depends(verify_token)):
 
 @app.post("/api/excel/append")
 async def append_row(request: AppendRequest, token: str = Depends(verify_token)):
-    """新增一列到 Excel 檔案（陣列模式）"""
+    """新增一列到 Excel 檔案(陣列模式)"""
     file_path = validate_file_path(request.file)
     try:
         if not file_lock_manager.acquire(str(file_path)):
@@ -347,7 +326,7 @@ async def append_row(request: AppendRequest, token: str = Depends(verify_token))
 @app.post("/api/excel/append_object")
 async def append_row_object(request: AppendObjectRequest, token: str = Depends(verify_token)):
     """
-    新增一列到 Excel 檔案（物件模式）
+    新增一列到 Excel 檔案(物件模式)
     根據欄位名稱自動對應到正確的欄位位置
     """
     file_path = validate_file_path(request.file)
@@ -436,35 +415,11 @@ async def read_rows(request: ReadRequest, token: str = Depends(verify_token)):
         logger.error(f"Error reading file: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/excel/update")
-async def update_row(request: UpdateRequest, token: str = Depends(verify_token)):
-    """舊版更新API（保留向後相容）"""
-    file_path = validate_file_path(request.file)
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-    try:
-        if not file_lock_manager.acquire(str(file_path)):
-            raise HTTPException(status_code=503, detail="File is locked")
-        try:
-            wb, ws = get_worksheet(file_path, request.sheet)
-            if request.row < 1 or request.row > ws.max_row:
-                raise HTTPException(status_code=400, detail="Invalid row number")
-            
-            for col_idx, value in enumerate(request.values, start=request.column_start):
-                ws.cell(row=request.row, column=col_idx, value=value)
-            
-            cleanup_all_empty_rows(ws)
-            save_workbook(wb, file_path)
-            return {"success": True, "message": f"Row {request.row} updated"}
-        finally:
-            file_lock_manager.release(str(file_path))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.put("/api/excel/update_advanced")
 async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depends(verify_token)):
     """
     進階更新 API - 支援按列號或 Lookup 定位，並按欄位名稱更新
+    可選擇處理所有匹配記錄或僅第一筆
     """
     file_path = validate_file_path(request.file)
     if not file_path.exists():
@@ -477,7 +432,7 @@ async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depen
             wb, ws = get_worksheet(file_path, request.sheet)
             
             # 確定要更新的列號
-            target_row = None
+            target_rows = []
             if request.row is not None:
                 # 方式1: 直接指定列號
                 target_row = request.row
@@ -489,14 +444,21 @@ async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depen
                         status_code=400, 
                         detail="Cannot update header row (row 1). Data rows start from row 2."
                     )
+                target_rows = [target_row]
             elif request.lookup_column and request.lookup_value:
                 # 方式2: 透過 Lookup 查找所有符合條件的記錄
-                target_rows = find_all_rows_by_lookup(ws, request.lookup_column, request.lookup_value)
-                if not target_rows:
+                matched_rows = find_all_rows_by_lookup(ws, request.lookup_column, request.lookup_value)
+                if not matched_rows:
                     raise HTTPException(
                         status_code=404, 
                         detail=f"No row found where {request.lookup_column} = {request.lookup_value}"
                     )
+                # 🆕 根據 process_all 決定處理哪些記錄
+                if request.process_all:
+                    target_rows = matched_rows  # 處理所有匹配記錄
+                else:
+                    target_rows = [matched_rows[0]]  # 只處理第一筆
+                    logger.info(f"Process mode: First match only (row {matched_rows[0]})")
             else:
                 raise HTTPException(
                     status_code=400, 
@@ -507,10 +469,9 @@ async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depen
             headers = get_headers(ws)
             
             # 處理單筆或多筆更新
-            rows_to_update = [target_row] if target_row is not None else target_rows
             updated_columns = []
             
-            for row_num in rows_to_update:
+            for row_num in target_rows:
                 for column_name, new_value in request.values_to_set.items():
                     if column_name not in headers:
                         logger.warning(f"Column '{column_name}' not found in headers, skipping")
@@ -527,10 +488,11 @@ async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depen
             
             return {
                 "success": True, 
-                "message": f"{len(rows_to_update)} row(s) updated",
-                "rows_updated": rows_to_update,
-                "updated_count": len(rows_to_update),
-                "updated_columns": updated_columns
+                "message": f"{len(target_rows)} row(s) updated",
+                "rows_updated": target_rows,
+                "updated_count": len(target_rows),
+                "updated_columns": updated_columns,
+                "process_mode": "all" if request.process_all else "first"
             }
         finally:
             file_lock_manager.release(str(file_path))
@@ -540,33 +502,11 @@ async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depen
         logger.error(f"Error updating row: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/excel/delete")
-async def delete_row(request: DeleteRequest, token: str = Depends(verify_token)):
-    """舊版刪除API（保留向後相容）"""
-    file_path = validate_file_path(request.file)
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-    try:
-        if not file_lock_manager.acquire(str(file_path)):
-            raise HTTPException(status_code=503, detail="File is locked")
-        try:
-            wb, ws = get_worksheet(file_path, request.sheet)
-            if request.row < 1 or request.row > ws.max_row:
-                raise HTTPException(status_code=400, detail="Invalid row number")
-            
-            ws.delete_rows(request.row)
-            cleanup_all_empty_rows(ws)
-            save_workbook(wb, file_path)
-            return {"success": True, "message": f"Row {request.row} deleted"}
-        finally:
-            file_lock_manager.release(str(file_path))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.delete("/api/excel/delete_advanced")
 async def delete_row_advanced(request: DeleteAdvancedRequest, token: str = Depends(verify_token)):
     """
     進階刪除 API - 支援按列號或 Lookup 定位
+    可選擇處理所有匹配記錄或僅第一筆
     """
     file_path = validate_file_path(request.file)
     if not file_path.exists():
@@ -579,7 +519,7 @@ async def delete_row_advanced(request: DeleteAdvancedRequest, token: str = Depen
             wb, ws = get_worksheet(file_path, request.sheet)
             
             # 確定要刪除的列號
-            target_row = None
+            target_rows = []
             if request.row is not None:
                 # 方式1: 直接指定列號
                 target_row = request.row
@@ -591,22 +531,29 @@ async def delete_row_advanced(request: DeleteAdvancedRequest, token: str = Depen
                         status_code=400, 
                         detail="Cannot delete header row (row 1). Data rows start from row 2."
                     )
+                target_rows = [target_row]
             elif request.lookup_column and request.lookup_value:
                 # 方式2: 透過 Lookup 查找所有符合條件的記錄
-                target_rows = find_all_rows_by_lookup(ws, request.lookup_column, request.lookup_value)
-                if not target_rows:
+                matched_rows = find_all_rows_by_lookup(ws, request.lookup_column, request.lookup_value)
+                if not matched_rows:
                     raise HTTPException(
                         status_code=404, 
                         detail=f"No row found where {request.lookup_column} = {request.lookup_value}"
                     )
+                # 🆕 根據 process_all 決定處理哪些記錄
+                if request.process_all:
+                    target_rows = matched_rows  # 處理所有匹配記錄
+                else:
+                    target_rows = [matched_rows[0]]  # 只處理第一筆
+                    logger.info(f"Process mode: First match only (row {matched_rows[0]})")
             else:
                 raise HTTPException(
                     status_code=400, 
                     detail="Must provide either 'row' or both 'lookup_column' and 'lookup_value'"
                 )
             
-            # 處理單筆或多筆刪除（從後往前刪除以避免行號偏移）
-            rows_to_delete = [target_row] if target_row is not None else sorted(target_rows, reverse=True)
+            # 處理單筆或多筆刪除(從後往前刪除以避免行號偏移)
+            rows_to_delete = sorted(target_rows, reverse=True)
             
             for row_num in rows_to_delete:
                 ws.delete_rows(row_num)
@@ -617,9 +564,10 @@ async def delete_row_advanced(request: DeleteAdvancedRequest, token: str = Depen
             
             return {
                 "success": True, 
-                "message": f"{len(rows_to_delete)} row(s) deleted",
-                "rows_deleted": rows_to_delete if target_row is None else [target_row],
-                "deleted_count": len(rows_to_delete)
+                "message": f"{len(target_rows)} row(s) deleted",
+                "rows_deleted": target_rows,
+                "deleted_count": len(target_rows),
+                "process_mode": "all" if request.process_all else "first"
             }
         finally:
             file_lock_manager.release(str(file_path))
@@ -672,6 +620,6 @@ if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     
-    logger.info(f"Starting Excel API Server v3.3.0")
+    logger.info(f"Starting Excel API Server v3.4.0")
     logger.info(f"Server address: {host}:{port}")
     uvicorn.run(app, host=host, port=port)

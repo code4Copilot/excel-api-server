@@ -130,16 +130,20 @@ class TestPerformance:
         start_time = time.time()
         
         for i in range(NUM_UPDATES):
-            row_num = (i % NUM_ROWS) + 1  # 循環更新不同的列
+            row_num = (i % NUM_ROWS) + 2  # 循環更新不同的列（跳過標題列）
             response = client.put(
-                "/api/excel/update",
+                "/api/excel/update_advanced",
                 headers=auth_headers,
                 json={
                     "file": "update_perf_test.xlsx",
                     "sheet": "Sheet1",
                     "row": row_num,
-                    "values": [f"UPD{i:04d}", f"Updated {i}", "Updated", 99999],
-                    "column_start": 1
+                    "values_to_set": {
+                        "ID": f"UPD{i:04d}",
+                        "Name": f"Updated {i}",
+                        "Department": "Updated",
+                        "Salary": 99999
+                    }
                 }
             )
             assert response.status_code == 200
