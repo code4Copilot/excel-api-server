@@ -665,6 +665,6 @@ if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     
-    logger.info(f"Starting Excel API Server v3.4.1")
+    logger.info(f"Starting Excel API Server v3.4.2")
     logger.info(f"Server address: {host}:{port}")
     uvicorn.run(app, host=host, port=port)
