@@ -5,6 +5,31 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
 
+## [3.4.1] - 2026-01-08
+
+### 新增
+- 新增 `/api/excel/headers` API 端點
+  - 獲取指定工作表的表頭（第一列）
+  - 返回欄位名稱列表
+  - 供前端下拉選單和動態表單使用
+  - 使用 read_only 模式提高效能
+- 新增英文版文件 (README_EN.md, API_REFERENCE_EN.md)
+
+### 改進
+- 完善 headers 端點的 API 文件
+- 新增針對 headers 端點的完整單元測試
+  - 測試正常獲取表頭
+  - 測試預設工作表
+  - 測試檔案不存在
+  - 測試工作表不存在
+  - 測試無認證訪問
+- 更新 README.md 添加 headers 端點使用說明
+- 更新 API_REFERENCE.md 添加 headers 參數參考
+
+### 相容性
+- ✅ 完全向後相容：不影響現有 API
+- ✅ 新增功能為獨立端點
+
 ## [3.4.0] - 2026-01-06
 
 ### 新增

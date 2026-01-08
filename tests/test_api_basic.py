@@ -62,3 +62,57 @@ def test_list_sheets_file_not_found(client, auth_headers):
         headers=auth_headers
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+def test_get_headers(client, auth_headers, sample_excel_file):
+    """測試獲取工作表表頭"""
+    response = client.get(
+        "/api/excel/headers",
+        params={"file": "test.xlsx", "sheet": "Sheet1"},
+        headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["success"] is True
+    assert "headers" in data
+    assert data["count"] == 4
+    assert data["headers"] == ["ID", "Name", "Department", "Salary"]
+
+def test_get_headers_default_sheet(client, auth_headers, sample_excel_file):
+    """測試獲取預設工作表表頭"""
+    response = client.get(
+        "/api/excel/headers",
+        params={"file": "test.xlsx"},
+        headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["success"] is True
+    assert len(data["headers"]) == 4
+
+def test_get_headers_file_not_found(client, auth_headers):
+    """測試獲取不存在檔案的表頭"""
+    response = client.get(
+        "/api/excel/headers",
+        params={"file": "nonexistent.xlsx"},
+        headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+def test_get_headers_sheet_not_found(client, auth_headers, sample_excel_file):
+    """測試獲取不存在工作表的表頭"""
+    response = client.get(
+        "/api/excel/headers",
+        params={"file": "test.xlsx", "sheet": "NonExistentSheet"},
+        headers=auth_headers
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    data = response.json()
+    assert "Sheet 'NonExistentSheet' not found" in data["detail"]
+
+def test_get_headers_no_auth(client):
+    """測試無認證時獲取表頭"""
+    response = client.get(
+        "/api/excel/headers",
+        params={"file": "test.xlsx"}
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN

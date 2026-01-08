@@ -1,7 +1,7 @@
 """
 Excel API Backend - FastAPI Server
 支援多人並發安全的 Excel 檔案操作
-Version 3.4.0 - 支援選擇性處理 Lookup 匹配記錄
+Version 3.4.1 - 新增 headers 端點，支援選擇性處理 Lookup 匹配記錄
 """
 
 import os
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Excel API Server",
     description="並發安全的 Excel 檔案操作 API",
-    version="3.4.0"
+    version="3.4.1"
 )
 
 app.add_middleware(
@@ -261,7 +261,7 @@ async def root():
     return {
         "service": "Excel API Server",
         "status": "running",
-        "version": "3.4.0",
+        "version": "3.4.1",
         "timestamp": datetime.now().isoformat(),
         "data_directory": str(EXCEL_ROOT_DIR),
         "lock_timeout": file_lock_manager.default_timeout
@@ -296,6 +296,47 @@ async def list_sheets(file: str, token: str = Depends(verify_token)):
         finally:
             file_lock_manager.release(str(file_path))
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/excel/headers")
+async def get_headers_endpoint(file: str, sheet: str = "Sheet1", token: str = Depends(verify_token)):
+    """
+    獲取指定工作表的表頭（第一列）
+    返回欄位名稱列表，供前端下拉選單使用
+    """
+    file_path = validate_file_path(file)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    try:
+        if not file_lock_manager.acquire(str(file_path)):
+            raise HTTPException(status_code=503, detail="File is locked")
+        try:
+            wb = openpyxl.load_workbook(file_path, read_only=True)
+            
+            if sheet not in wb.sheetnames:
+                wb.close()
+                raise HTTPException(status_code=404, detail=f"Sheet '{sheet}' not found")
+            
+            ws = wb[sheet]
+            
+            # 讀取第一列作為表頭
+            headers_dict = get_headers(ws)
+            header_names = list(headers_dict.keys())
+            
+            wb.close()
+            
+            return {
+                "success": True, 
+                "headers": header_names,
+                "count": len(header_names)
+            }
+        finally:
+            file_lock_manager.release(str(file_path))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting headers: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/excel/append")
@@ -418,7 +459,7 @@ async def read_rows(request: ReadRequest, token: str = Depends(verify_token)):
 @app.put("/api/excel/update_advanced")
 async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depends(verify_token)):
     """
-    進階更新 API - 支援按列號或 Lookup 定位，並按欄位名稱更新
+    進階更新 API - 支持按列號或 Lookup 定位，並按欄位名稱更新
     可選擇處理所有匹配記錄或僅第一筆
     """
     file_path = validate_file_path(request.file)
@@ -505,7 +546,7 @@ async def update_row_advanced(request: UpdateAdvancedRequest, token: str = Depen
 @app.delete("/api/excel/delete_advanced")
 async def delete_row_advanced(request: DeleteAdvancedRequest, token: str = Depends(verify_token)):
     """
-    進階刪除 API - 支援按列號或 Lookup 定位
+    進階刪除 API - 支持按列號或 Lookup 定位
     可選擇處理所有匹配記錄或僅第一筆
     """
     file_path = validate_file_path(request.file)
@@ -620,6 +661,6 @@ if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     
-    logger.info(f"Starting Excel API Server v3.4.0")
+    logger.info(f"Starting Excel API Server v3.4.1")
     logger.info(f"Server address: {host}:{port}")
     uvicorn.run(app, host=host, port=port)
