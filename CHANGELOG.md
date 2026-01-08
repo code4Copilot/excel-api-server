@@ -5,6 +5,30 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 版本號遵循 [Semantic Versioning](https://semver.org/lang/zh-TW/)。
 
+## [3.4.2] - 2026-01-08
+
+### 改進
+- 統一所有 API 的錯誤訊息格式為 `"Sheet '{sheet_name}' not found"`
+- 修改 Update 和 Delete API 行為：當工作表不存在時返回 404 錯誤，而非自動建立新工作表
+- 改善異常處理：確保 404 錯誤正確傳播，不被一般異常處理器覆蓋
+- 新增針對錯誤訊息驗證的單元測試
+  - test_read_nonexistent_sheet
+  - test_update_nonexistent_sheet
+  - test_delete_nonexistent_sheet
+
+### 修正
+- 修復 `read_rows()` 函數的異常處理順序，確保 HTTPException 優先處理
+- 修復 Update/Delete API 會意外建立不存在工作表的問題
+
+### 破壞性變更
+- ⚠️ Update 和 Delete API 不再自動建立不存在的工作表
+- 建議：使用前先確認工作表存在，或使用 Create API 明確建立
+
+### 相容性
+- ✅ Read 和 Headers API 行為不變
+- ✅ 所有錯誤訊息格式統一，更易於解析
+- ⚠️ 需要更新依賴 Update/Delete 自動建立工作表行為的程式碼
+
 ## [3.4.1] - 2026-01-08
 
 ### 新增

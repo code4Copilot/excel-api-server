@@ -3,7 +3,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.4.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.4.2-blue.svg)](CHANGELOG.md)
 
 A **concurrency-safe** RESTful API server for Excel file operations. Designed for multi-user scenarios, allowing multiple workflows or users to safely access the same Excel files simultaneously. Supports batch conditional updates and deletions, perfect for automation workflows.
 
@@ -14,6 +14,7 @@ A **concurrency-safe** RESTful API server for Excel file operations. Designed fo
 - **[API Parameter Reference](API_REFERENCE.md)** - Detailed parameter descriptions and examples
 - **[Testing Guide](TESTING.md)** - How to run tests
 - **[Changelog](CHANGELOG.md)** - Complete update history
+- **[v3.4.2 Release Notes](RELEASE_NOTES_3.4.2.md)** - Latest version improvements
 - **[中文文檔](README_zh-tw.md)** - Chinese version
 
 ## 🎯 Why This Project?

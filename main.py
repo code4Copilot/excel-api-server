@@ -1,7 +1,7 @@
 """
 Excel API Backend - FastAPI Server
 支援多人並發安全的 Excel 檔案操作
-Version 3.4.1 - 新增 headers 端點，支援選擇性處理 Lookup 匹配記錄
+Version 3.4.2 - 統一錯誤處理，改善 API 行為一致性
 """
 
 import os
@@ -244,7 +244,8 @@ def ensure_file_exists(file_path: Path, sheet_name: str = "Sheet1"):
 def get_worksheet(file_path: Path, sheet_name: str):
     wb = openpyxl.load_workbook(file_path)
     if sheet_name not in wb.sheetnames:
-        wb.create_sheet(sheet_name)
+        wb.close()
+        raise HTTPException(status_code=404, detail=f"Sheet '{sheet_name}' not found")
     return wb, wb[sheet_name]
 
 def save_workbook(wb, file_path: Path):
@@ -427,7 +428,8 @@ async def read_rows(request: ReadRequest, token: str = Depends(verify_token)):
         try:
             wb = openpyxl.load_workbook(file_path, data_only=True)
             if request.sheet not in wb.sheetnames:
-                raise HTTPException(status_code=404, detail="Sheet not found")
+                wb.close()
+                raise HTTPException(status_code=404, detail=f"Sheet '{request.sheet}' not found")
             ws = wb[request.sheet]
             
             data = []
@@ -452,6 +454,8 @@ async def read_rows(request: ReadRequest, token: str = Depends(verify_token)):
             return {"success": True, "data": data, "row_count": len(data)}
         finally:
             file_lock_manager.release(str(file_path))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error reading file: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

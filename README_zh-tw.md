@@ -3,7 +3,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-3.4.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.4.2-blue.svg)](CHANGELOG.md)
 
 一個**並發安全**的 Excel 檔案操作 RESTful API 伺服器。專為多使用者場景設計，讓多個工作流程或使用者可以同時安全地存取相同的 Excel 檔案。支援批量條件更新和刪除，完美適用於自動化工作流程。
 
@@ -14,7 +14,7 @@
 - **[API 參數參考](API_REFERENCE_zh-tw.md)** - 詳細的參數說明和範例
 - **[測試指南](TESTING.md)** - 如何執行測試
 - **[版本歷史](CHANGELOG.md)** - 完整的更新記錄
-- **[v3.4.0 更新說明](RELEASE_NOTES_3.4.0.md)** - 最新版本的新功能
+- **[v3.4.2 更新說明](RELEASE_NOTES_3.4.2.md)** - 最新版本的改進
 - **[English Documentation](README.md)** - English version
 
 ## 🎯 為什麼需要這個專案？

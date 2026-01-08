@@ -108,6 +108,20 @@ class TestReadOperations:
             }
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
+    
+    def test_read_nonexistent_sheet(self, client, auth_headers, sample_excel_file):
+        """測試讀取不存在的工作表"""
+        response = client.post(
+            "/api/excel/read",
+            headers=auth_headers,
+            json={
+                "file": "test.xlsx",
+                "sheet": "NonExistentSheet"
+            }
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert "Sheet 'NonExistentSheet' not found" in data["detail"]
 
 class TestUpdateOperations:
     """更新操作測試"""
@@ -235,6 +249,24 @@ class TestUpdateOperations:
         )
         # 超出範圍的列號會引發 400 錯誤
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+    
+    def test_update_nonexistent_sheet(self, client, auth_headers, sample_excel_file):
+        """測試更新不存在的工作表"""
+        response = client.put(
+            "/api/excel/update_advanced",
+            headers=auth_headers,
+            json={
+                "file": "test.xlsx",
+                "sheet": "NonExistentSheet",
+                "row": 2,
+                "values_to_set": {
+                    "Name": "Test"
+                }
+            }
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert "Sheet 'NonExistentSheet' not found" in data["detail"]
 
 class TestDeleteOperations:
     """刪除操作測試"""
@@ -349,3 +381,19 @@ class TestDeleteOperations:
             }
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
+    
+    def test_delete_nonexistent_sheet(self, client, auth_headers, sample_excel_file):
+        """測試刪除不存在的工作表"""
+        response = client.request(
+            "DELETE",
+            "/api/excel/delete_advanced",
+            headers=auth_headers,
+            json={
+                "file": "test.xlsx",
+                "sheet": "NonExistentSheet",
+                "row": 2
+            }
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert "Sheet 'NonExistentSheet' not found" in data["detail"]
