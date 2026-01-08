@@ -204,51 +204,7 @@ Response:
 }
 ```
 
-#### 6. Update Row
-
-```bash
-PUT /api/excel/update
-Content-Type: application/json
-Authorization: Bearer {token}
-
-Request Body:
-{
-  "file": "users.xlsx",
-  "sheet": "Sheet1",
-  "row": 5,
-  "values": ["E0001", "John Smith", "Sales", 80000],
-  "column_start": 1
-}
-
-Response:
-{
-  "success": true,
-  "message": "Row 5 updated successfully"
-}
-```
-
-#### 7. Delete Row
-
-```bash
-DELETE /api/excel/delete
-Content-Type: application/json
-Authorization: Bearer {token}
-
-Request Body:
-{
-  "file": "users.xlsx",
-  "sheet": "Sheet1",
-  "row": 5
-}
-
-Response:
-{
-  "success": true,
-  "message": "Row 5 deleted successfully"
-}
-```
-
-#### 8. Advanced Update (Supports conditional queries and batch updates)
+#### 6. Advanced Update (Supports conditional queries and batch updates)
 
 ```bash
 PUT /api/excel/update_advanced
@@ -331,7 +287,7 @@ Response:
 - 🎨 **Column Selection**: Only update columns specified in `values_to_set`
 - 🛡️ **Header Protection**: Cannot update row 1 (header row)
 
-#### 9. Advanced Delete (Supports conditional queries and batch deletion)
+#### 7. Advanced Delete (Supports conditional queries and batch deletion)
 
 ```bash
 DELETE /api/excel/delete_advanced
@@ -401,7 +357,7 @@ Response:
 - ⚡ **Smart Ordering**: Deletes from bottom to top to avoid row offset issues
 - 🛡️ **Header Protection**: Cannot delete row 1 (header row)
 
-#### 10. Batch Operations
+#### 8. Batch Operations
 
 ```bash
 POST /api/excel/batch

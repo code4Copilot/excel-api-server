@@ -204,51 +204,7 @@ Authorization: Bearer {token}
 }
 ```
 
-#### 6. 更新列
-
-```bash
-PUT /api/excel/update
-Content-Type: application/json
-Authorization: Bearer {token}
-
-請求內容：
-{
-  "file": "users.xlsx",
-  "sheet": "Sheet1",
-  "row": 5,
-  "values": ["E0001", "John Smith", "Sales", 80000],
-  "column_start": 1
-}
-
-回應：
-{
-  "success": true,
-  "message": "Row 5 updated successfully"
-}
-```
-
-#### 7. 刪除列
-
-```bash
-DELETE /api/excel/delete
-Content-Type: application/json
-Authorization: Bearer {token}
-
-請求內容：
-{
-  "file": "users.xlsx",
-  "sheet": "Sheet1",
-  "row": 5
-}
-
-回應：
-{
-  "success": true,
-  "message": "Row 5 deleted successfully"
-}
-```
-
-#### 8. 進階更新（支援條件查詢和批量更新）
+#### 6. 進階更新（支援條件查詢和批量更新）
 
 ```bash
 PUT /api/excel/update_advanced
@@ -331,7 +287,7 @@ Authorization: Bearer {token}
 - 🎨 **欄位選擇**：只更新 `values_to_set` 中指定的欄位
 - 🛡️ **標題保護**：無法更新第 1 列（標題列）
 
-#### 9. 進階刪除（支援條件查詢和批量刪除）
+#### 7. 進階刪除（支援條件查詢和批量刪除）
 
 ```bash
 DELETE /api/excel/delete_advanced
@@ -401,7 +357,7 @@ Authorization: Bearer {token}
 - ⚡ **智能排序**：從後往前刪除，避免行號偏移
 - 🛡️ **標題保護**：無法刪除第 1 列（標題列）
 
-#### 10. 批次操作
+#### 8. 批量操作
 
 ```bash
 POST /api/excel/batch
